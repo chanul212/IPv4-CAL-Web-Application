@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPv4 Calculator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0B1120;
+      --bg-grid: #0E1626;
+      --surface: #121A2E;
+      --surface-alt: #17203A;
+      --border: #253055;
+      --border-soft: #1C2540;
+      --text: #E7ECF5;
+      --text-dim: #8C97B8;
+      --text-faint: #5C6890;
+      --net: #5EEAD4;
+      --net-glow: rgba(94, 234, 212, 0.18);
+      --host: #FBBF6B;
+      --host-glow: rgba(251, 191, 107, 0.16);
+      --error: #F87171;
+      --error-glow: rgba(248, 113, 113, 0.12);
+      --good: #34D399;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 15% 0%, rgba(94, 234, 212, 0.05), transparent 45%),
+        radial-gradient(circle at 85% 15%, rgba(251, 191, 107, 0.04), transparent 40%),
+        var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', sans-serif;
+      padding: clamp(20px, 5vw, 56px) 16px 60px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      margin-bottom: clamp(28px, 5vw, 44px);
+      animation: fadeUp 0.6s ease both;
+    }
+
+    .eyebrow {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 0.28em;
+      color: var(--net);
+      text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 6vw, 48px);
+      font-weight: 700;
+      margin: 0 0 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .hero p.sub {
+      color: var(--text-dim);
+      font-size: 15px;
+      max-width: 520px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    /*  Input card  */
+    .input-card {
+      background: linear-gradient(180deg, var(--surface), var(--surface-alt));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(20px, 4vw, 30px);
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 24px;
+      animation: fadeUp 0.6s ease 0.05s both;
+    }
+
+    @media (max-width: 620px) {
+      .input-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field-group label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 10px;
+    }
+
+    .octet-inputs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .octet-inputs .dot {
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: -2px;
+    }
+
+    input {
+      font-family: 'JetBrains Mono', monospace;
+      background: #0D1425;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    .octet {
+      width: 100%;
+      max-width: 64px;
+      height: 48px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 500;
+      padding: 0;
+    }
+
+    .octet:focus,
+    #maskInput:focus {
+      border-color: var(--net);
+      box-shadow: 0 0 0 3px var(--net-glow);
+      background: #0F1A30;
+    }
+
+    #maskInput {
+      width: 100%;
+      height: 48px;
+      padding: 0 14px;
+      font-size: 16px;
+    }
+
+    .field-group.invalid .octet,
+    .field-group.invalid #maskInput {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px var(--error-glow);
+    }
+
+    .hint {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-faint);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .error-banner {
+      margin-top: 16px;
+      padding: 13px 16px;
+      background: var(--error-glow);
+      border: 1px solid rgba(248, 113, 113, 0.35);
+      border-radius: var(--radius-sm);
+      color: #FFB4B4;
+      font-size: 13.5px;
+      line-height: 1.5;
+      animation: fadeUp 0.3s ease both;
+    }
+
+    .error-banner strong {
+      color: #FFD3D3;
+    }
+
+    /*  Bit visualization (signature element)  */
+    .bitviz-card {
+      margin-top: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(18px, 4vw, 28px);
+      animation: fadeUp 0.6s ease 0.1s both;
+    }
+
+    .bitviz-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .bitviz-title {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 0.05em;
+    }
+
+    .legend {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend .swatch {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    .legend .swatch.net {
+      background: var(--net);
+    }
+
+    .legend .swatch.host {
+      background: var(--host);
+    }
+
+    .bit-strip {
+      display: flex;
+      justify-content: space-between;
+      gap: clamp(4px, 1.5vw, 14px);
+      flex-wrap: wrap;
+    }
+
+    .byte-group {
+      display: flex;
+      gap: 3px;
+      padding: 8px 7px;
+      background: #0D1425;
+      border: 1px solid var(--border-soft);
+      border-radius: 8px;
+    }
+
+    .bit {
+      width: clamp(9px, 2.6vw, 15px);
+      height: 22px;
+      border-radius: 3px;
+      background: #1B2440;
+      transition: background 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .bit.net.one {
+      background: var(--net);
+      box-shadow: 0 0 8px var(--net-glow);
+    }
+
+    .bit.net.zero {
+      background: rgba(94, 234, 212, 0.14);
+    }
+
+    .bit.host.one {
+      background: var(--host);
+      box-shadow: 0 0 8px var(--host-glow);
+    }
+
+    .bit.host.zero {
+      background: rgba(251, 191, 107, 0.10);
+    }
+
+    .byte-decimals {
+      display: flex;
+      justify-content: space-between;
+      gap: clamp(4px, 1.5vw, 14px);
+      margin-top: 10px;
+    }
+
+    .byte-decimals span {
+      flex: 1;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-faint);
+    }
+
+    .bit-caption {
+      margin-top: 16px;
+      text-align: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .bit-caption b {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /*  Results  */
+    .results-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .result-card .label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+      margin-bottom: 8px;
+    }
+
+    .result-card .value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .result-card .value.accent-net {
+      color: var(--net);
+    }
+
+    .result-card .value.accent-host {
+      color: var(--host);
+    }
+
+    .result-card .sub-note {
+      margin-top: 4px;
+      font-size: 11.5px;
+      color: var(--text-faint);
+    }
+
+    .placeholder-note {
+      text-align: center;
+      color: var(--text-faint);
+      font-size: 13.5px;
+      padding: 30px 10px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      color: var(--text-faint);
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    ::selection {
+      background: var(--net-glow);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="page">
+
+    <div class="hero">
+      <p class="eyebrow">Network / Subnet Toolkit</p>
+      <h1>IPv4 Calculator</h1>
+      <p class="sub">Enter an address and a mask - a CIDR prefix or a dotted subnet mask both work - to see exactly
+        where the network ends and the hosts begin.</p>
+    </div>
+
+    <div class="input-card">
+      <div class="field-group" id="ipGroup">
+        <label for="o0">IP Address</label>
+        <div class="octet-inputs">
+          <input class="octet" id="o0" inputmode="numeric" maxlength="3" placeholder="192">
+          <span class="dot">.</span>
+          <input class="octet" id="o1" inputmode="numeric" maxlength="3" placeholder="168">
+          <span class="dot">.</span>
+          <input class="octet" id="o2" inputmode="numeric" maxlength="3" placeholder="1">
+          <span class="dot">.</span>
+          <input class="octet" id="o3" inputmode="numeric" maxlength="3" placeholder="10">
+        </div>
+        <p class="hint">Type each octet - the cursor jumps forward automatically.</p>
+      </div>
+
+      <div class="field-group" id="maskGroup">
+        <label for="maskInput">Subnet Mask or CIDR</label>
+        <input id="maskInput" type="text" placeholder="/24 or 255.255.255.0">
+        <p class="hint">Either format works.</p>
+      </div>
+    </div>
+
+    <div id="errorBanner" class="error-banner" hidden></div>
+
+    <div class="bitviz-card">
+      <div class="bitviz-header">
+        <span class="bitviz-title">Bit-level view</span>
+        <span class="legend">
+          <span><i class="swatch net"></i>Network bits</span>
+          <span><i class="swatch host"></i>Host bits</span>
+        </span>
+      </div>
+      <div class="bit-strip" id="bitStrip"></div>
+      <div class="byte-decimals" id="byteDecimals"></div>
+      <p class="bit-caption" id="bitCaption">Enter an address above to see its bits.</p>
+    </div>
+
+    <div class="results-grid" id="results">
+      <div class="placeholder-note">Results will appear here once a valid address and mask are entered.</div>
+    </div>
+
+    <footer>All calculations run locally in your browser.
+      <br> Developed by <a href="www.linkedin.com/in/chanul-dilhara-0a35a6379" target="_blank">Chanul Dilhara</a>
+      <br> &reg; All rights received.
+    </footer>
+
+  </div>
+
+  <script>
+    (function () {
+      const octetIds = ['o0', 'o1', 'o2', 'o3'];
+      const octets = octetIds.map(id => document.getElementById(id));
+      const maskInput = document.getElementById('maskInput');
+      const ipGroup = document.getElementById('ipGroup');
+      const maskGroup = document.getElementById('maskGroup');
+      const errorBanner = document.getElementById('errorBanner');
+      const bitStrip = document.getElementById('bitStrip');
+      const byteDecimals = document.getElementById('byteDecimals');
+      const bitCaption = document.getElementById('bitCaption');
+      const results = document.getElementById('results');
+
+      /* ---------- Octet auto-jump behaviour ---------- */
+      octets.forEach((input, idx) => {
+        input.addEventListener('input', () => {
+          let v = input.value.replace(/[^\d]/g, '');
+          if (v !== '') {
+            let n = parseInt(v, 10);
+            if (n > 255) v = '255';
+          }
+          input.value = v;
+          // Jump forward once the octet is "full" (3 digits, or 2 digits that can't grow past 255)
+          const numeric = parseInt(v, 10);
+          const canGrow = v.length < 3 && (v.length === 0 || numeric * 10 <= 255 || (v.length === 1));
+          if (v.length === 3 || (v.length === 2 && numeric > 25)) {
+            focusNext(idx);
+          }
+          recalculate();
+        });
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key === '.' || e.key === '/') {
+            e.preventDefault();
+            focusNext(idx);
+          } else if (e.key === 'Backspace' && input.value === '' && idx > 0) {
+            e.preventDefault();
+            const prev = octets[idx - 1];
+            prev.focus();
+            prev.setSelectionRange(prev.value.length, prev.value.length);
+          } else if (e.key === 'ArrowRight' && input.selectionStart === input.value.length) {
+            focusNext(idx);
+          } else if (e.key === 'ArrowLeft' && input.selectionStart === 0 && idx > 0) {
+            octets[idx - 1].focus();
+          }
+        });
+
+        input.addEventListener('blur', recalculate);
+      });
+
+      function focusNext(idx) {
+        if (idx < 3) {
+          octets[idx + 1].focus();
+          octets[idx + 1].select();
+        } else {
+          maskInput.focus();
+          maskInput.select();
+        }
+      }
+
+      /* Mask / CIDR smart formatting  */
+      maskInput.addEventListener('input', () => {
+        let v = maskInput.value;
+
+        if (v.startsWith('/')) {
+          let digits = v.slice(1).replace(/[^\d]/g, '').slice(0, 2);
+          maskInput.value = '/' + digits;
+        } else if (/^\d+$/.test(v)) {
+          // plain number - leave it, could still become a CIDR prefix
+          maskInput.value = v.slice(0, 3);
+        } else {
+          // dotted-mask style auto formatting
+          let cleaned = v.replace(/[^\d.]/g, '');
+          let parts = cleaned.split('.');
+          parts = parts.slice(0, 4).map(p => {
+            p = p.replace(/^0+(?=\d)/, '');
+            if (p !== '' && parseInt(p, 10) > 255) p = '255';
+            return p.slice(0, 3);
+          });
+          let out = '';
+          parts.forEach((p, i) => {
+            out += p;
+            const isLast = i === parts.length - 1;
+            if (!isLast) out += '.';
+            else if ((p.length === 3 || parseInt(p, 10) > 25) && parts.length < 4) out += '.';
+          });
+          maskInput.value = out;
+        }
+        recalculate();
+      });
+
+      maskInput.addEventListener('blur', recalculate);
+
+      /*  Helpers  */
+      function toIpInt(parts) {
+        return ((parts[0] * 16777216) + (parts[1] * 65536) + (parts[2] * 256) + parts[3]) >>> 0;
+      }
+
+      function intToIp(int) {
+        return [(int >>> 24) & 255, (int >>> 16) & 255, (int >>> 8) & 255, int & 255].join('.');
+      }
+
+      function prefixToMaskInt(prefix) {
+        return prefix === 0 ? 0 : (0xFFFFFFFF << (32 - prefix)) >>> 0;
+      }
+
+      function parseMaskOrCidr(raw) {
+        raw = raw.trim();
+        if (raw === '') return { error: 'Enter a subnet mask or CIDR prefix.' };
+
+        let candidate = raw.startsWith('/') ? raw.slice(1) : raw;
+
+        if (/^\d{1,2}$/.test(candidate)) {
+          const p = parseInt(candidate, 10);
+          if (p < 0 || p > 32) return { error: 'A CIDR prefix must be between /0 and /32.' };
+          return { prefix: p };
+        }
+
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(raw)) {
+          const parts = raw.split('.').map(Number);
+          if (parts.some(p => isNaN(p) || p < 0 || p > 255)) {
+            return { error: 'Subnet mask octets must each be between 0 and 255.' };
+          }
+          const maskInt = toIpInt(parts);
+          const bin = (maskInt >>> 0).toString(2).padStart(32, '0');
+          if (!/^1*0*$/.test(bin)) {
+            return { error: 'That subnet mask isn\'t valid - the 1-bits must be contiguous from the left, e.g. 255.255.255.0.' };
+          }
+          const prefix = bin.split('').filter(b => b === '1').length;
+          return { prefix };
+        }
+
+        return { error: 'Enter a CIDR prefix like /24, or a dotted subnet mask like 255.255.255.0.' };
+      }
+
+      function ipClass(firstOctet) {
+        if (firstOctet === 127) return { label: 'A', note: 'Loopback range' };
+        if (firstOctet < 128) return { label: 'A', note: '1–126' };
+        if (firstOctet < 192) return { label: 'B', note: '128–191' };
+        if (firstOctet < 224) return { label: 'C', note: '192–223' };
+        if (firstOctet < 240) return { label: 'D', note: 'Multicast, 224–239' };
+        return { label: 'E', note: 'Reserved, 240–255' };
+      }
+
+      function cidrMatch(ipInt, baseParts, prefixLen) {
+        const baseInt = toIpInt(baseParts);
+        const m = prefixToMaskInt(prefixLen);
+        return (ipInt & m) >>> 0 === (baseInt & m) >>> 0;
+      }
+
+      function addressType(ipInt) {
+        if (cidrMatch(ipInt, [127, 0, 0, 0], 8)) return 'Loopback';
+        if (cidrMatch(ipInt, [10, 0, 0, 0], 8) ||
+          cidrMatch(ipInt, [172, 16, 0, 0], 12) ||
+          cidrMatch(ipInt, [192, 168, 0, 0], 16)) return 'Private';
+        if (cidrMatch(ipInt, [169, 254, 0, 0], 16)) return 'Link-local';
+        if (cidrMatch(ipInt, [224, 0, 0, 0], 4)) return 'Multicast';
+        if (cidrMatch(ipInt, [240, 0, 0, 0], 4)) return 'Reserved';
+        if (ipInt === 0xFFFFFFFF) return 'Limited broadcast';
+        return 'Public';
+      }
+
+      /*  Rendering  */
+      function showError(msg) {
+        errorBanner.hidden = false;
+        errorBanner.innerHTML = '<strong>Can\'t calculate - </strong>' + msg;
+        results.innerHTML = '<div class="placeholder-note">Fix the highlighted field to see results.</div>';
+      }
+
+      function clearError() {
+        errorBanner.hidden = true;
+        errorBanner.innerHTML = '';
+        ipGroup.classList.remove('invalid');
+        maskGroup.classList.remove('invalid');
+      }
+
+      function renderBits(parts, prefix) {
+        let bitIndex = 0;
+        let stripHtml = '';
+        let decHtml = '';
+        parts.forEach(octet => {
+          const bin = octet.toString(2).padStart(8, '0');
+          let group = '<div class="byte-group">';
+          for (let i = 0; i < 8; i++) {
+            const isNet = bitIndex < prefix;
+            const isOne = bin[i] === '1';
+            group += `<span class="bit ${isNet ? 'net' : 'host'} ${isOne ? 'one' : 'zero'}"></span>`;
+            bitIndex++;
+          }
+          group += '</div>';
+          stripHtml += group;
+          decHtml += `<span>${octet}</span>`;
+        });
+        bitStrip.innerHTML = stripHtml;
+        byteDecimals.innerHTML = decHtml;
+        bitCaption.innerHTML = `<b>${parts.join('.')}</b> / ${prefix} &nbsp;-&nbsp; first ${prefix} bits are the network, the remaining ${32 - prefix} identify the host.`;
+      }
+
+      function resetBits() {
+        bitStrip.innerHTML = '';
+        byteDecimals.innerHTML = '';
+        bitCaption.textContent = 'Enter an address above to see its bits.';
+      }
+
+      function card(label, value, opts) {
+        opts = opts || {};
+        const accentClass = opts.accent ? ` accent-${opts.accent}` : '';
+        const note = opts.note ? `<div class="sub-note">${opts.note}</div>` : '';
+        return `<div class="result-card"><div class="label">${label}</div><div class="value${accentClass}">${value}</div>${note}</div>`;
+      }
+
+      function renderResults(data) {
+        let html = '';
+        html += card('Network Address', data.network, { accent: 'net' });
+        html += card('Broadcast Address', data.broadcast, { accent: 'host' });
+        html += card('First Usable Host', data.first);
+        html += card('Last Usable Host', data.last);
+        html += card('Usable Host Range', data.range, { note: data.rangeNote });
+        html += card('Subnet Mask', data.maskDotted);
+        html += card('Total Addresses', data.total.toLocaleString());
+        html += card('Usable Hosts', data.usable.toLocaleString());
+        html += card('IP Class', 'Class ' + data.cls.label, { note: data.cls.note });
+        results.innerHTML = html;
+      }
+
+      /* ---------- Main calculation ---------- */
+      function recalculate() {
+        clearError();
+
+        const rawOctets = octets.map(o => o.value.trim());
+        const allEmpty = rawOctets.every(v => v === '') && maskInput.value.trim() === '';
+        if (allEmpty) {
+          results.innerHTML = '<div class="placeholder-note">Results will appear here once a valid address and mask are entered.</div>';
+          resetBits();
+          return;
+        }
+
+        if (rawOctets.some(v => v === '')) {
+          ipGroup.classList.add('invalid');
+          showError('enter all four octets of the IP address.');
+          resetBits();
+          return;
+        }
+
+        const parts = rawOctets.map(Number);
+        if (parts.some(p => isNaN(p) || p < 0 || p > 255)) {
+          ipGroup.classList.add('invalid');
+          showError('each IP octet must be a number between 0 and 255.');
+          resetBits();
+          return;
+        }
+
+        const maskRaw = maskInput.value.trim();
+        if (maskRaw === '') {
+          maskGroup.classList.add('invalid');
+          showError('enter a subnet mask or CIDR prefix, e.g. /24 or 255.255.255.0.');
+          resetBits();
+          return;
+        }
+
+        const parsed = parseMaskOrCidr(maskRaw);
+        if (parsed.error) {
+          maskGroup.classList.add('invalid');
+          showError(parsed.error);
+          resetBits();
+          return;
+        }
+
+        const prefix = parsed.prefix;
+        const ipInt = toIpInt(parts);
+        const maskInt = prefixToMaskInt(prefix);
+        const wildcardInt = (~maskInt) >>> 0; // still needed for broadcast calculation
+        const networkInt = (ipInt & maskInt) >>> 0;
+        const broadcastInt = (networkInt | wildcardInt) >>> 0;
+        const total = Math.pow(2, 32 - prefix);
+
+        let usable, firstInt, lastInt, rangeNote;
+        if (prefix === 32) {
+          usable = 1;
+          firstInt = networkInt;
+          lastInt = networkInt;
+          rangeNote = 'A /32 identifies a single host - no separate network or broadcast address.';
+        } else if (prefix === 31) {
+          usable = 2;
+          firstInt = networkInt;
+          lastInt = broadcastInt;
+          rangeNote = 'A /31 has no network or broadcast address - both addresses are usable (point-to-point links, RFC 3021).';
+        } else {
+          usable = total - 2;
+          firstInt = (networkInt + 1) >>> 0;
+          lastInt = (broadcastInt - 1) >>> 0;
+          rangeNote = null;
+        }
+
+        renderBits(parts, prefix);
+
+        renderResults({
+          network: intToIp(networkInt),
+          broadcast: intToIp(broadcastInt),
+          first: intToIp(firstInt),
+          last: intToIp(lastInt),
+          range: `${intToIp(firstInt)} – ${intToIp(lastInt)}`,
+          rangeNote,
+          maskDotted: intToIp(maskInt),
+          total,
+          usable,
+          cls: ipClass(parts[0])
+        });
+      }
+
+      // Seed with a friendly example on first paint
+      window.addEventListener('DOMContentLoaded', () => {
+        resetBits();
+      });
+    })();
+  </script>
+
+</body>
+
+</html>
